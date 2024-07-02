@@ -1,0 +1,3 @@
+[x] lexer
+[ ] parser
+[ ] evaluator
