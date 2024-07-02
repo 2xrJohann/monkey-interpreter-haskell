@@ -6,6 +6,7 @@ data Keywords =
     FN
     | LET
 
+lookupKeyword :: String -> Token.Token
 lookupKeyword keyword =
     case keyword of
     "fn" -> Token.FUNCTION
