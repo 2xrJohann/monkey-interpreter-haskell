@@ -41,5 +41,4 @@ data Token =
     | IF
     | ELSE
     | RETURN
-    
     deriving (Eq, Show)
