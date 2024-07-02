@@ -71,7 +71,7 @@ lex lexer =
     peekEquals :: T -> Token.Token -> Token.Token -> (T, Token.Token)
 
     peekEquals lexer default' peek =
-        maybe (lexer, default') peekEquals' (ch nextLexer)
+        maybe (nextLexer, default') peekEquals' (ch nextLexer)
         where
             nextLexer = next lexer
 
@@ -79,8 +79,3 @@ lex lexer =
                 case character of
                 '=' -> (next nextLexer, peek)
                 _ -> (nextLexer, default')
-
-
-
-
-
