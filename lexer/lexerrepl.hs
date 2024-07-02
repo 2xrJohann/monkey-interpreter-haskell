@@ -5,6 +5,8 @@ import qualified Lexer.Token as Token
 
 {- Compile REPL with `ghc lexer/lexerrepl.hs -main-is LexerREPL` -}
 
+main :: IO()
+
 main = do
     print "Welcome to monkey lexer REPL"
     inputLoop
