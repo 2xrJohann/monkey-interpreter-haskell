@@ -9,15 +9,19 @@ data Test = Test {
 }
 
 main :: IO ()
+
 main = do 
     print "hello"
     runTests
     where
 
+    testInput :: String
     testInput = "5=+hello(){  } , ;let 7 834 != == ! "
 
+    initedLexer :: Lexer.T
     initedLexer = Lexer.new testInput
 
+    newTest :: Token.Token -> String -> Test
     newTest eT tS =
         Test {
             expectedType = eT,
@@ -45,12 +49,14 @@ main = do
         newTest Token.EOF "EOF"
      ]
 
+    runTest :: Token.Token -> Test -> String
     runTest tokenType test =
         let expected = expectedType test
         in if expected == tokenType
         then "Pass"
         else "Fail got: " ++ show tokenType
     
+    runTests :: IO ()
     runTests =
             let (nextLexer, token) = Lexer.lex initedLexer in
             let runTests' token lexer tests =
