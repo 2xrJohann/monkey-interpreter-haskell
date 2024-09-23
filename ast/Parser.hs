@@ -305,13 +305,3 @@ repl = forever $ do
 
 main = do
     repl
-    {-let testInput =
-         "if(a) {return a;}"
-    let testLexer = Lexer.new testInput
-    let tokens = lexAll testLexer
-    putStrLn ("tokens -> " ++ show tokens)
-    let testParser = Parser.new testLexer []
-    let program = parseProgram testParser []
-    putStrLn ("length of statements: " ++ show (length program))
-    let run = mapM_ print program
-    run -}
