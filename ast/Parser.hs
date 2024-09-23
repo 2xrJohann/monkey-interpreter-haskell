@@ -290,7 +290,7 @@ parseProgram parser stmts =
 
 repl :: IO ()
 repl = forever $ do
-    putStr "λ type shit >> "
+    putStr "type shit >> "
     hFlush stdout
     input <- getLine
     if input == "exit"
