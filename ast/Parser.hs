@@ -116,14 +116,12 @@ parseBlockStatement parser =
             else
                 (parser, Ast.BlockStatement $ reverse acc)
 
-
 parseGroupedExpression :: Parser -> (Parser, Ast.Expression)
 parseGroupedExpression parser =
     let next = nextParser parser in
     let (np, ex) = parseExpression next LOWEST in
     let retParser = errorHelper (expectPeek np Token.RPAREN) np in
         (retParser, ex)
-
 
 parseInfixExpression :: Parser -> Expression -> (Parser, Expression)
 parseInfixExpression parser infixLeft =
@@ -194,7 +192,6 @@ parseLetStatement parser =
     let (np, ex) = parseExpression (nextParser assignParser) LOWEST in
     let retParser = if peekToken np == Token.SEMICOLON then nextParser np else np in
     (Ast.LET $ Ast.LetStatement identStr ex, nextParser retParser)
-
 
 parseReturnStatement :: Parser -> (Statement, Parser)
 parseReturnStatement parser =
