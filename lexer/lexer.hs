@@ -18,11 +18,23 @@ new input = T { input = input, ch = Just $ head input}
 next :: T -> T
 
 next lexer = case input lexer of
-    "" -> T { input = "", ch = Nothing}
+    "" -> new ""
     _ -> let remainder = tail $ input lexer in
         if null remainder then
-        T { input = "", ch = Nothing } else
-        T { input = remainder, ch = Just $ head remainder }
+        new "" else
+        new remainder
+
+
+lexAll :: T -> [Token.Token]
+
+lexAll lexer =
+    reverse . go lexer $ []
+  where
+    go lexer acc =
+        let (lx, token) = lex lexer in
+            case token of
+                Token.EOF -> Token.EOF : acc
+                _         -> go lx (token : acc)
 
 lex :: T -> (T, Token.Token)
 
