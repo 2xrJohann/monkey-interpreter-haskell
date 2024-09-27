@@ -23,7 +23,7 @@ instance Show Fn where
         "}"
       where
         showParams :: [Ast.Expression] -> String
-        showParams ps = "[" ++ intercalate ", " (map show ps) ++ "]"
+        showParams ps = intercalate ", " (map show ps)
 
         showBody :: Ast.BlockStatement -> String
         showBody stmts = "{...}" -- Simplified representation of the function body
@@ -37,7 +37,7 @@ instance Show Env where
       where
         showEnvMap :: Map.Map String Object -> String
         showEnvMap m =
-            "{" ++ intercalate "," (map showKeyValue (Map.toList m)) ++ "}"
+            "{" ++ intercalate "" (map showKeyValue (Map.toList m)) ++ "}"
 
         showKeyValue :: (String, Object) -> String
         showKeyValue (k, v) = "    " ++ show k ++ " -> " ++ show v
@@ -63,7 +63,22 @@ data Object =
     | BuiltIn BuiltInFunction
     | Array [Object]
     | Hash (Map Object Object)
-    deriving Show
+
+instance Show Object where
+    show (Integer x) = show x
+    show (String x) = x 
+    show (Boolean x) = show x
+    show Null = "Null"
+    show (Return x) = "Return: " ++ show x
+    show Assign = "Assign"
+    show (Function fn) = "Function with parameters: " ++ showParams (parameters fn)
+    show (BuiltIn fn) = "BuiltIn: " ++ name fn  
+    show (Array xs) = intercalate "" (map show xs)
+    show (Hash m) = "{" ++ intercalate ", " (map showKeyValue (Map.toList m)) ++ "}"
+
+showKeyValue (k, v) = show k ++ " -> " ++ show v
+
+showParams ps = intercalate ", " (map show ps)
 
 instance Ord Object where
     compare (Integer x) (Integer y) = compare x y
@@ -251,7 +266,7 @@ getBuiltins =
                     otherwise -> error ("push expected array, got " ++ show (head args))
 
     builtInPuts :: [Object] -> Object
-    builtInPuts args = String $ show args
+    builtInPuts args = String $ intercalate ", " $ map show args
 
 newClosedEnv :: Env -> Env
 newClosedEnv inEnv = Env Map.empty $ Just inEnv
