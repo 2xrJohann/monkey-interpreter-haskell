@@ -33,7 +33,10 @@ buildPrefixParseFns =
             (Token.showToken $ Token.INTEGER 0, parseIntegerLiteral),
             (Token.showToken Token.LPAREN, parseGroupedExpression),
             (Token.showToken Token.IF, parseIfExpression),
-            (Token.showToken Token.FUNCTION, parseFunctionLiteral)
+            (Token.showToken Token.FUNCTION, parseFunctionLiteral),
+            (Token.showToken $ Token.STRING "", parseStringLiteral),
+            (Token.showToken Token.LBRACKET, parseArrayLiteral),
+            (Token.showToken Token.LBRACE, parseHashLiteral)
         ] ++
         [   (Token.showToken token, parseBoolean) | token <- [Token.TRUE, Token.FALSE]
         ] ++
@@ -42,9 +45,58 @@ buildPrefixParseFns =
 buildInfixParseFns :: Map String (Parser -> Ast.Expression -> (Parser, Ast.Expression))
 buildInfixParseFns =
     let tokenList = [Token.PLUS, Token.MINUS, Token.ASTERISK, Token.SLASH, Token.EQUAL, Token.NOTEQUAL, Token.LT, Token.GT] in
-    Map.fromList $ mapTokens tokenList ++ [(Token.showToken Token.LPAREN, parseCallExpression)]
+    Map.fromList $ (mapTokens tokenList ++ [(Token.showToken Token.LPAREN, parseCallExpression)]) ++ [
+        (Token.showToken Token.LBRACKET, parseIndexExpression)
+    ]
     where
         mapTokens = map (\token -> (Token.showToken token, parseInfixExpression))
+
+parseHashLiteral :: Parser -> (Parser, Ast.Expression)
+parseHashLiteral parser =
+    let (parser', hashLiteral) = parseHashLiteral' parser Map.empty in
+    (parser', hashLiteral)
+    where
+        parseHashLiteral' :: Parser -> Map Expression Expression -> (Parser, Ast.Expression)
+        parseHashLiteral' parser kv =
+            if peekToken parser /= Token.RBRACE
+                then
+                    let next = nextParser parser in
+                    let (parser', key) = parseExpression next LOWEST in
+                    let parser'' = nextParser $ errorHelper (expectPeek parser' Token.COLON) parser' in
+                    let (parser''', value) = parseExpression parser'' LOWEST in
+                    let updatedMap = Map.insert key value kv in
+                    parseHashLiteral' parser''' updatedMap
+                else
+                    (errorHelper (expectPeek parser Token.RBRACE) parser, Ast.HASHLITERAL kv)
+
+parseIndexExpression :: Parser -> Ast.Expression -> (Parser, Ast.Expression)
+parseIndexExpression parser left =
+    let next = nextParser parser in
+    let (parser', index) = parseExpression next LOWEST in
+    (errorHelper (expectPeek parser' Token.RBRACKET) parser', Ast.INDEXEXPRESSION $ IndexExpression left index)
+
+parseArrayLiteral :: Parser -> (Parser, Ast.Expression)
+parseArrayLiteral parser =
+    let (parser', array) = parseExpressionList parser [] in
+        (parser', ARRAYLITERAL array)
+    where
+    parseExpressionList parser acc =
+        let next = nextParser parser in
+        if peekToken parser == Token.RBRACKET
+            then
+                if currToken parser == Token.LBRACKET
+                    then
+                        (next, reverse acc)
+                    else
+                        let (parser', expression) = parseExpression parser LOWEST in
+                        (errorHelper (expectPeek parser' Token.RBRACKET) parser', reverse (expression : acc))
+            else
+                let (parser', expression) = parseExpression next LOWEST in
+                if peekToken parser' == Token.COMMA
+                    then
+                        parseExpressionList (nextParser parser') (expression : acc)
+                    else
+                        (errorHelper (expectPeek parser' Token.RBRACKET) parser', reverse (expression : acc))
 
 parseCallExpression :: Parser -> Expression -> (Parser, Ast.Expression)
 parseCallExpression parser func =
@@ -138,6 +190,12 @@ parseBoolean parser =
         Token.FALSE -> (parser, Ast.BOOLEAN False)
         otherwise -> error "expected bool"
 
+parseStringLiteral :: Parser -> (Parser, Ast.Expression)
+parseStringLiteral parser =
+    case currToken parser of
+        Token.STRING x -> (parser, Ast.STRING x)
+        otherwise -> error "expected string"        
+
 parseIdentifier :: Parser -> (Parser, Ast.Expression)
 parseIdentifier parser =
     case currToken parser of
@@ -193,6 +251,7 @@ parseLetStatement parser =
     let retParser = if peekToken np == Token.SEMICOLON then nextParser np else np in
     (Ast.LET $ Ast.LetStatement identStr ex, nextParser retParser)
 
+
 parseReturnStatement :: Parser -> (Statement, Parser)
 parseReturnStatement parser =
     let (np, ex) = parseExpression (nextParser parser) LOWEST in
@@ -207,6 +266,7 @@ data Priority =
     | PRODUCT
     | PREFIX
     | CALL
+    | INDEX
 
 prio :: Priority -> Int
 prio p =
@@ -218,6 +278,7 @@ prio p =
     PRODUCT -> 5
     PREFIX -> 6
     CALL -> 7
+    INDEX -> 8
 
 precedences :: Token.Token -> Priority
 precedences token =
@@ -231,7 +292,14 @@ precedences token =
         Token.SLASH -> PRODUCT
         Token.ASTERISK -> PRODUCT
         Token.LPAREN -> CALL
+        Token.LBRACKET -> INDEX
         otherwise -> LOWEST
+
+{- maybe neat refactor op? dont think it matters -}
+tokenToPrio :: Token.Token -> Int
+tokenToPrio token =
+    let fn = prio . precedences in
+        fn token
 
 peekPrecedence :: Parser -> Priority
 peekPrecedence parser =
@@ -295,10 +363,21 @@ repl = forever $ do
         else do
             let testLexer = Lexer.new input
             let tokens = lexAll testLexer
-            putStrLn ("tokens -> " ++ show tokens)
+            putStrLn ("tokens -> \n" ++ show tokens)
             let testParser = Parser.new testLexer []
             let program = parseProgram testParser []
+            print ("AST -> ")
             mapM_ print program
 
 main = do
     repl
+    {-let testInput =
+         "if(a) {return a;}"
+    let testLexer = Lexer.new testInput
+    let tokens = lexAll testLexer
+    putStrLn ("tokens -> " ++ show tokens)
+    let testParser = Parser.new testLexer []
+    let program = parseProgram testParser []
+    putStrLn ("length of statements: " ++ show (length program))
+    let run = mapM_ print program
+    run -}
